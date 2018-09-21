@@ -1,29 +1,28 @@
 package com.epam.training.toto.service.parser.util;
 
+import com.epam.training.toto.domain.Hit;
+
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParsePosition;
 
-import javax.annotation.PostConstruct;
-
-import com.epam.training.toto.domain.Hit;
-
-public class HitParser implements Parser<Hit> {
-
+public class HitParser {
+    private static HitParser instance = new HitParser();
     private DecimalFormat format;
 
-    @Override
-    public Hit parse(final String... input) {
-        initFormatter();
-        return Hit.builder()
-                .setNumberOfGames(Integer.parseInt(input[0]))
-                .setPrizeForTheGames((format.parse(input[1], new ParsePosition(0))).intValue())
-                .build();
-    }
-
-    private void initFormatter() {
+    private HitParser() {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();
         symbols.setGroupingSeparator(' ');
         format = new DecimalFormat("###,### UAH", symbols);
+    }
+
+    public static HitParser getInstance() {
+        return instance;
+    }
+
+    public Hit parse(final String... input) {
+        return new Hit(Integer.parseInt(input[0]),
+                (format.parse(input[1], new ParsePosition(0))).intValue()
+        );
     }
 }

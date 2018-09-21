@@ -9,56 +9,64 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RoundParser implements Parser<Round> {
+public class RoundParser {
+    public static final Integer NUMBER_OF_GAMES = 14;
+    public static final Integer NUMBER_OF_HITS = 5;
+
+    public static RoundParser instance = new RoundParser();
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd.");
-    private Parser<Hit> hitParser = new HitParser();
-    private Parser<Outcome> outcomeParser = new OutcomeParser();
+    private HitParser hitParser = HitParser.getInstance();
+    private OutcomeParser outcomeParser = OutcomeParser.getInstance();
 
-    @Override
-    public Round parse(final String... input) {
-        return Round.builder()
-                .setYear(Integer.parseInt(input[0]))
-                .setWeek(Integer.parseInt(input[1]))
-                .setRound(parseWeekNumber(input[2]))
-                .setDate(retrieveDateOfRound(input))
-                .setHits(getHits(input))
-                .setOutcomes(getOutcomes(input))
-                .build();
+    private RoundParser() {
     }
 
-    private int parseWeekNumber(final String input) {
-        if (input.equals("-")) {
-            return 1;
-        } else {
-            return Integer.parseInt(input);
-        }
+    public static RoundParser getInstance() {
+        return instance;
     }
 
-    private LocalDate retrieveDateOfRound(final String[] input) {
-        if (input[3].isEmpty()) {
-            return LocalDate.ofYearDay(Integer.parseInt(input[0]), (Integer.parseInt(input[1]) - 1) * 7 + 1);
-        } else {
-            return LocalDate.parse(input[3], formatter);
-        }
+    /**
+     * Method parses input data
+     *
+     * @param input a row of data with all information about the round from the source file
+     * @return Round parsed from input data
+     */
+    public Round parse(String... input) {
+        return new Round(Integer.parseInt(input[0]),
+                Integer.parseInt(input[1]),
+                parseWeekNumber(input[2]),
+                parseDateOfRound(input),
+                getHits(input),
+                getOutcomes(input)
+        );
     }
 
-    private List<Hit> getHits(final String[] input) {
+    private int parseWeekNumber(String input) {
+        return "-".equals(input) ? 1 : Integer.parseInt(input);
+    }
+
+    private LocalDate parseDateOfRound(String[] input) {
+        return input[3].isEmpty() ?
+                LocalDate.ofYearDay(Integer.parseInt(input[0]), (Integer.parseInt(input[1]) - 1) * 7 + 1) :
+                LocalDate.parse(input[3], formatter);
+    }
+
+    private List<Hit> getHits(String[] input) {
         List<Hit> result = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < NUMBER_OF_HITS; i++) {
             Hit hit = hitParser.parse(input[4 + 2 * i], input[5 + 2 * i]);
-            hit.setCount(14 - i);
+            hit.setCount(NUMBER_OF_GAMES - i);
             result.add(hit);
         }
         return result;
     }
 
-    private List<Outcome> getOutcomes(final String[] input) {
+    private List<Outcome> getOutcomes(String[] input) {
         List<Outcome> result = new ArrayList<>();
-        for (int i = 0; i < 14; i++) {
+        for (int i = 0; i < NUMBER_OF_GAMES; i++) {
             result.add(outcomeParser.parse(input[14 + i]));
         }
         return result;
     }
-
 }
