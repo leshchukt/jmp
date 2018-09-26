@@ -1,4 +1,4 @@
-package com.epam.training.toto.service.parser.util;
+package com.epam.training.toto.service.parser;
 
 import com.epam.training.toto.domain.Hit;
 
@@ -20,9 +20,7 @@ public class HitParser {
         return instance;
     }
 
-    public Hit parse(final String... input) {
-        return new Hit(Integer.parseInt(input[0]),
-                (format.parse(input[1], new ParsePosition(0))).intValue()
-        );
+    public Hit parse(String... input) {
+        return new Hit(format.parse(input[1], new ParsePosition(0)).intValue());
     }
 }

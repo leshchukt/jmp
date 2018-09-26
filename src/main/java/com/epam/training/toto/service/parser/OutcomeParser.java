@@ -1,4 +1,4 @@
-package com.epam.training.toto.service.parser.util;
+package com.epam.training.toto.service.parser;
 
 import com.epam.training.toto.domain.Outcome;
 

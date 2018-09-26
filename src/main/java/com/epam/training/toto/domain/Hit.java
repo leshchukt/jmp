@@ -1,20 +1,13 @@
 package com.epam.training.toto.domain;
 
 public class Hit {
-    private int count;
-    private int numberOfGames;
     private Integer prizeForTheGames;
 
-    public Hit(int numberOfGames, int prizeForTheGames) {
-        this.numberOfGames = numberOfGames;
+    public Hit(int prizeForTheGames) {
         this.prizeForTheGames = prizeForTheGames;
     }
 
     public Integer getPrizeForTheGames() {
         return prizeForTheGames;
-    }
-
-    public void setCount(int count) {
-        this.count = count;
     }
 }

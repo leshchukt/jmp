@@ -1,47 +1,58 @@
 package com.epam.training.toto.service;
 
+import com.epam.training.toto.domain.Hit;
 import com.epam.training.toto.domain.Outcome;
 import com.epam.training.toto.domain.Round;
 import com.epam.training.toto.service.parser.CSVParser;
-import com.epam.training.toto.service.parser.util.OutcomeParser;
+import com.epam.training.toto.service.parser.OutcomeParser;
+import com.epam.training.toto.util.Constant;
+import com.epam.training.toto.util.exception.DataCanNotBeReadException;
 
-import java.io.IOException;
-import java.text.NumberFormat;
+import java.io.PrintStream;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * TotoService is a service to process the input data and get statistical information about wagers.
+ * Before using this class initData() must be called in order to read data to operate with from the source file.
+ */
 public class TotoService {
-    public static final Integer NUMBER_OF_GAMES = 14;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd.");
-    private final NumberFormat numberFormat = NumberFormat.getCurrencyInstance(new Locale("uk", "UA"));
-
+    private CSVParser parser;
+    private Scanner scanner;
     private Map<LocalDate, Round> data;
 
-    public TotoService() {
+    private static final PrintStream console = System.out;
+    private static final PrintStream error = System.err;
+
+    public TotoService(Scanner scanner) {
+        this.parser = new CSVParser();
+        this.scanner = scanner;
+    }
+
+    public void initData() {
         try {
-            data = new CSVParser().readData();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            data = parser.readData();
+        } catch (DataCanNotBeReadException e) {
+            error.println(e.getMessage());
+            System.exit(1);
         }
     }
 
     private Integer getTheLargestPrize() {
-        List<Integer> allPrizes = data.values()
+        return data.values()
                 .stream()
-                .map(round -> round.getHits())
+                .map(Round::getHits)
                 .flatMap(Collection::stream)
-                .map(hit -> hit.getPrizeForTheGames())
-                .collect(Collectors.toList());
-
-        return Collections.max(allPrizes);
+                .map(Hit::getPrizeForTheGames)
+                .max(Comparator.naturalOrder())
+                .get();
     }
 
     private List<Map<Outcome, Long>> getDistributionOfResultsForEachRound() {
-        List<Map<Outcome, Long>> distributionForEachRound = new ArrayList<>(2 * data.size());
+        List<Map<Outcome, Long>> distributionForEachRound = new ArrayList<>();
         data.values()
                 .forEach(round -> distributionForEachRound.add(round.getOutcomes()
                         .stream()
@@ -51,15 +62,14 @@ public class TotoService {
     }
 
     public void printTheLargestPrize() {
-        System.out.println("======== The largest prize: " +
-                numberFormat.format(getTheLargestPrize()) +
-                " ========");
+        console.println(String.format("======== The largest prize: %s ========",
+                Constant.numberFormat.format(getTheLargestPrize())));
     }
 
     public void printDistributionOfTheResults() {
-        System.out.println("\n======== The distribution of the results of each round ========");
+        console.println("\n======== The distribution of the results of each round ========");
         getDistributionOfResultsForEachRound()
-                .forEach(round -> System.out.println("team #1 won: " +
+                .forEach(round -> console.println("team #1 won: " +
                         formatDistribution(round.get(Outcome.FIRST_TEAM_VICTORY)) +
                         ", team #2 won: " +
                         formatDistribution(round.get(Outcome.SECOND_TEAM_VICTORY)) +
@@ -72,11 +82,11 @@ public class TotoService {
         if (amountOfVictories == null) {
             return "0%";
         }
-        return String.format("%.2f ", amountOfVictories / (double) NUMBER_OF_GAMES) + "%";
+        return String.format("%.2f ", amountOfVictories / (double) Constant.NUMBER_OF_GAMES) + "%";
     }
 
     public void printHitsAndAmountForTheWager() {
-        System.out.println("\n======== The hits and amount for the wager ========");
+        console.println("\n======== The hits and amount for the wager ========");
         Optional<Round> round;
         do {
             LocalDate dateToSearch = readDateToSearch();
@@ -86,26 +96,25 @@ public class TotoService {
         List<Outcome> wager = readWager();
         int hitCounter = 0;
         int prize = 0;
-        for (int gameCounter = 0; gameCounter < NUMBER_OF_GAMES; gameCounter++) {
+        for (int gameCounter = 0; gameCounter < Constant.NUMBER_OF_GAMES; gameCounter++) {
             if (round.get().getOutcomes().get(gameCounter) == wager.get(gameCounter)) {
                 hitCounter++;
             }
         }
-        if (hitCounter > 9) {
-            prize = round.get().getHits().get(NUMBER_OF_GAMES % hitCounter).getPrizeForTheGames();
+        if (hitCounter > Constant.START_NUMBER_OF_HITS_TO_MAKE_MONEY - 1) {
+            prize = round.get().getHits().get(Constant.NUMBER_OF_GAMES % hitCounter).getPrizeForTheGames();
         }
-        System.out.println("Result: hits: " + hitCounter + ", amount: " + numberFormat.format(prize));
+        console.println(String.format("Result: hits: %d, amount: %s", hitCounter, Constant.numberFormat.format(prize)));
     }
 
     private List<Outcome> readWager() {
         List<Outcome> outcomes = new ArrayList<>();
-        Scanner scanner = new Scanner(System.in);
         boolean isInputCorrect;
         do {
-            System.out.print("Enter outcomes (1/2/X): ");
+            console.print("Enter outcomes (1/2/X): ");
             String input = scanner.next();
             char[] enteredOutcomes = input.toCharArray();
-            for (int gameCounter = 0; gameCounter < NUMBER_OF_GAMES; gameCounter++) {
+            for (int gameCounter = 0; gameCounter < Constant.NUMBER_OF_GAMES; gameCounter++) {
                 outcomes.add(OutcomeParser.getInstance().parse(String.valueOf(enteredOutcomes[gameCounter])));
             }
             String verifiedInput = input.replaceAll("1", "")
@@ -113,6 +122,7 @@ public class TotoService {
                     .replaceAll("X", "");
             isInputCorrect = verifiedInput.isEmpty();
         } while (!isInputCorrect);
+
         return outcomes;
     }
 
@@ -124,19 +134,20 @@ public class TotoService {
     }
 
     private LocalDate readDateToSearch() {
-        Scanner scanner = new Scanner(System.in);
         LocalDate dateToSearch = LocalDate.now();
         boolean isDateCorrect;
         do {
-            System.out.print("Enter date: ");
+            console.print("Enter date: ");
             try {
-                dateToSearch = LocalDate.parse(scanner.next(), formatter);
+                String input = scanner.next();
+                dateToSearch = LocalDate.parse(input, Constant.formatter);
                 isDateCorrect = true;
             } catch (DateTimeParseException e) {
                 isDateCorrect = false;
-                System.out.println("Please enter the valid date to search in format: yyyy.MM.dd.");
+                error.println("Please enter the valid date to search in format: yyyy.MM.dd.");
             }
         } while (!isDateCorrect);
+
         return dateToSearch;
     }
 }

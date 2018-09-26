@@ -2,12 +2,19 @@ package com.epam.training.toto;
 
 import com.epam.training.toto.service.TotoService;
 
+import java.util.Scanner;
+
 public class App {
     public static void main(String[] args) {
-        TotoService service = new TotoService();
+        try (Scanner scanner = new Scanner(System.in)) {
+            TotoService service = new TotoService(scanner);
 
-        service.printTheLargestPrize();
-        service.printDistributionOfTheResults();
-        service.printHitsAndAmountForTheWager();
+            service.initData();
+
+            service.printTheLargestPrize();
+            service.printDistributionOfTheResults();
+            service.printHitsAndAmountForTheWager();
+
+        }
     }
 }
