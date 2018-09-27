@@ -2,8 +2,7 @@
 package com.epam.training.toto.service.parser;
 
 import com.epam.training.toto.domain.Round;
-import com.epam.training.toto.service.parser.util.Parser;
-import com.epam.training.toto.service.parser.util.RoundParser;
+import com.epam.training.toto.util.exception.DataCanNotBeReadException;
 import com.opencsv.CSVReader;
 
 import java.io.FileReader;
@@ -15,20 +14,18 @@ import java.util.Map;
 public class CSVParser {
     public static final String INPUT_DATA_PATH = "/toto.csv";
 
-    private Parser<Round> roundParser = new RoundParser();
-
-    public Map<LocalDate, Round> readInfo() {
+    public Map<LocalDate, Round> readData() throws DataCanNotBeReadException {
         try (CSVReader reader =
                      new CSVReader(new FileReader(CSVParser.class.getResource(INPUT_DATA_PATH).getFile()), ';')) {
-            Map<LocalDate, Round> info = new HashMap<>();
+            Map<LocalDate, Round> data = new HashMap<>();
             String[] line;
             while ((line = reader.readNext()) != null) {
-                final Round round = roundParser.parse(line);
-                info.put(round.getDate(), round);
+                final Round round = RoundParser.getInstance().parse(line);
+                data.put(round.getDate(), round);
             }
-            return info;
+            return data;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new DataCanNotBeReadException(e);
         }
     }
 }
